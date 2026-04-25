@@ -5,6 +5,8 @@
 ## 特色功能
 
 - 🔄 **智能分段**：自動根據 YAML 結構分段，避免 context 過大
+- 🎯 **精準翻譯**：支援指定特定 YAML 鍵值或段落進行局部翻譯
+- 💾 **原地替換**：支援直接覆寫原檔案 (`-i`)，方便漸進式翻譯工作流
 - 🧠 **翻譯記憶**：維護翻譯一致性的記憶庫
 - ⚡ **速率控制**：內建速率限制器，防止 API 限制問題
 - 🎯 **靈活配置**：支援 OpenAI 格式的 API（自定義 URL、Key、模型）
@@ -54,6 +56,15 @@ yaml-translate input.yaml -o output.yaml
 # 指定語言
 yaml-translate input.yaml -o output.yaml -l zh-TW
 
+# 翻譯特定段落 (可多個目標鍵，逗號分隔)
+yaml-translate input.yaml -o output.yaml -l zh-TW -k app.name,settings.theme
+
+# 原地替換 (直接修改並覆寫原檔案)
+yaml-translate input.yaml -i -l zh-TW
+
+# 原地替換且只翻譯指定段落
+yaml-translate input.yaml -i -l zh-TW -k settings
+
 # 使用配置文件
 yaml-translate input.yaml --config config.yaml
 ```
@@ -91,6 +102,8 @@ prompt:
 
 ```bash
 yaml-translate input.yaml \
+  -i \
+  -k app.name,settings \
   --output output.yaml \
   --language zh-TW \
   --api-url https://api.openai.com/v1 \

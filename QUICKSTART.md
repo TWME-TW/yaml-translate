@@ -107,6 +107,19 @@ yaml-translate input.yaml -o output.yaml -l ja
 yaml-translate input.yaml -l zh-TW
 ```
 
+### 精準翻譯與原地替換
+
+```bash
+# 只翻譯特定的鍵值段落 (多個請用逗號分隔)
+yaml-translate input.yaml -o output.yaml -l zh-TW -k app.name,settings
+
+# 原地覆寫翻譯 (不再產生新檔案，直接修改 input.yaml)
+yaml-translate input.yaml -i -l zh-TW
+
+# 原地覆寫且僅翻譯指定段落 (非常適合進行漸進式翻譯)
+yaml-translate input.yaml -i -l zh-TW -k messages.error
+```
+
 ### 使用配置文件
 
 ```bash
