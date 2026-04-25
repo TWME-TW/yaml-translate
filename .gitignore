@@ -63,3 +63,6 @@ Thumbs.db
 
 config.yaml
 config.yml
+
+*.yml
+*.yaml
