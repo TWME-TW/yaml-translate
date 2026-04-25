@@ -9,6 +9,7 @@ import re
 from typing import Optional
 from pathlib import Path
 from tqdm import tqdm
+import concurrent.futures
 
 from .config import Config
 from .yaml_parser import YAMLParser, YAMLSegment
@@ -91,19 +92,35 @@ class YAMLTranslator:
         # 2. 翻譯每個段落
         print(f"\n🌍 Translating {len(segments)} segment(s)...")
         print(f"   (Intermediate result will be auto-saved to {output_file} periodically)")
+        print(f"   (Concurrency: {self.config.concurrency} worker threads)")
         
-        for i, segment in enumerate(tqdm(segments, desc="Translating", unit="segment")):
-            self._translate_segment(segment, target_lang)
+        # 使用 ThreadPoolExecutor 來實現並行翻譯
+        completed = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.concurrency) as executor:
+            # 提交所有任務
+            future_to_segment = {
+                executor.submit(self._translate_segment, segment, target_lang): segment
+                for segment in segments
+            }
             
-            # 每 5 個 segment 或是處理完所有段落時，即時寫入檔案（提供預覽）
-            # 因為部分還沒翻譯到的內容會顯示為原文
-            if (i + 1) % 5 == 0 or (i + 1) == len(segments):
+            # 使用 tqdm 追蹤進度
+            for future in tqdm(concurrent.futures.as_completed(future_to_segment), total=len(segments), desc="Translating", unit="segment"):
+                segment = future_to_segment[future]
                 try:
-                    temp_result = self.parser.reconstruct_yaml(segments, fallback_to_original=True)
-                    self.parser.save_yaml(temp_result, output_file)
-                except Exception as e:
-                    # 如果預覽寫入失敗，不中斷翻譯進程
-                    pass
+                    # 等待並獲取結果
+                    future.result()
+                except Exception as exc:
+                    print(f"⚠️ Segment generated an exception: {exc}")
+                
+                completed += 1
+                
+                # 每 5 個 segment 或是處理完所有段落時，即時寫入檔案（提供預覽）
+                if completed % 5 == 0 or completed == len(segments):
+                    try:
+                        temp_result = self.parser.reconstruct_yaml(segments, fallback_to_original=True)
+                        self.parser.save_yaml(temp_result, output_file)
+                    except Exception as e:
+                        pass
         
         # 3. 重建最終 YAML 結構（確保完全正確生成且沒有 fallback）
         print("\n🔨 Finalizing YAML structure...")
@@ -157,7 +174,7 @@ class YAMLTranslator:
         # 等待速率限制
         self.rate_limiter.wait_if_needed(segment.token_count)
         
-        max_retries = 2
+        max_retries = self.config.max_retries
         last_error_msg = None
         
         for attempt in range(max_retries + 1):

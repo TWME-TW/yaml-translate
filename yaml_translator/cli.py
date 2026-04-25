@@ -5,6 +5,7 @@
 
 import click
 import sys
+import time
 from pathlib import Path
 
 from .config import Config
@@ -128,14 +129,17 @@ def main(
                 input_path = Path(input_file)
                 output = str(input_path.parent / f"{input_path.stem}_translated{input_path.suffix}")
             
+            start_time = time.time()
             # 執行翻譯
             translator.translate_file(
                 input_file=input_file,
                 output_file=output,
                 target_language=language
             )
+            elapsed_time = time.time() - start_time
             
             click.echo(f"\n🎉 Success! Translated file saved to: {output}")
+            click.echo(f"⏱️  Total time elapsed: {elapsed_time:.2f} seconds")
     
     except KeyboardInterrupt:
         click.echo("\n\n⚠️  Translation interrupted by user", err=True)
