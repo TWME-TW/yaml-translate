@@ -4,6 +4,7 @@
 """
 
 import sqlite3
+import threading
 from typing import List, Optional, Tuple
 from datetime import datetime
 import difflib
@@ -21,11 +22,12 @@ class TranslationMemory:
         """
         self.db_path = db_path
         self.conn = None
+        self.lock = threading.Lock()
         self._init_database()
     
     def _init_database(self):
         """初始化資料庫"""
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         cursor = self.conn.cursor()
         
         # 創建表
@@ -67,14 +69,15 @@ class TranslationMemory:
             source_lang: 源語言
             context_path: YAML 路徑上下文
         """
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            INSERT INTO translations 
-            (source_text, target_text, source_lang, target_lang, context_path)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (source_text, target_text, source_lang, target_lang, context_path))
-        
-        self.conn.commit()
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO translations 
+                (source_text, target_text, source_lang, target_lang, context_path)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (source_text, target_text, source_lang, target_lang, context_path))
+            
+            self.conn.commit()
     
     def find_exact_match(
         self, 
@@ -93,15 +96,16 @@ class TranslationMemory:
         Returns:
             Optional[str]: 譯文（如果找到）
         """
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT target_text FROM translations
-            WHERE source_text = ? AND target_lang = ? AND source_lang = ?
-            ORDER BY created_at DESC
-            LIMIT 1
-        ''', (source_text, target_lang, source_lang))
-        
-        result = cursor.fetchone()
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT target_text FROM translations
+                WHERE source_text = ? AND target_lang = ? AND source_lang = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            ''', (source_text, target_lang, source_lang))
+            
+            result = cursor.fetchone()
         return result[0] if result else None
     
     def find_similar_translations(
@@ -126,15 +130,16 @@ class TranslationMemory:
             List[Tuple[str, str, float]]: 
                 [(source, target, similarity), ...]
         """
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT DISTINCT source_text, target_text FROM translations
-            WHERE target_lang = ? AND source_lang = ?
-            ORDER BY created_at DESC
-            LIMIT 100
-        ''', (target_lang, source_lang))
-        
-        results = cursor.fetchall()
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT DISTINCT source_text, target_text FROM translations
+                WHERE target_lang = ? AND source_lang = ?
+                ORDER BY created_at DESC
+                LIMIT 100
+            ''', (target_lang, source_lang))
+            
+            results = cursor.fetchall()
         
         # 計算相似度
         similar = []

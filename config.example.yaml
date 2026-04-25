@@ -8,6 +8,8 @@ api:
 translation:
   target_language: "zh-TW"
   max_tokens_per_request: 4000
+  concurrency: 5
+  max_retries: 3
   
 # 速率限制
 rate_limit:

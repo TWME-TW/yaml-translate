@@ -45,7 +45,9 @@ class OpenAIClient:
             'Authorization': f'Bearer {self.api_key}'
         }
         
-        self.max_retries = 3
+        from .config import Config
+        cfg = Config()
+        self.max_retries = cfg.max_retries
         self.retry_delay = 2  # 秒
     
     def translate(

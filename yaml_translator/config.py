@@ -29,6 +29,8 @@ class Config:
         self.model = os.getenv("MODEL", "gpt-4")
         self.target_language = os.getenv("TARGET_LANGUAGE", "zh-TW")
         self.max_tokens_per_request = int(os.getenv("MAX_TOKENS_PER_REQUEST", "4000"))
+        self.concurrency = int(os.getenv("CONCURRENCY", "5"))
+        self.max_retries = int(os.getenv("MAX_RETRIES", "3"))
         self.rate_limit_rpm = int(os.getenv("RATE_LIMIT_RPM", "60"))
         self.rate_limit_tpm = int(os.getenv("RATE_LIMIT_TPM", "90000"))
         self.memory_db_path = os.getenv("MEMORY_DB_PATH", "./translation_memory.db")
@@ -69,6 +71,8 @@ class Config:
                 trans_config = config_data['translation']
                 self.target_language = trans_config.get('target_language', self.target_language)
                 self.max_tokens_per_request = trans_config.get('max_tokens_per_request', self.max_tokens_per_request)
+                self.concurrency = trans_config.get('concurrency', self.concurrency)
+                self.max_retries = trans_config.get('max_retries', self.max_retries)
             
             # 速率限制
             if 'rate_limit' in config_data:
@@ -125,6 +129,8 @@ class Config:
             'model': self.model,
             'target_language': self.target_language,
             'max_tokens_per_request': self.max_tokens_per_request,
+            'concurrency': self.concurrency,
+            'max_retries': self.max_retries,
             'rate_limit_rpm': self.rate_limit_rpm,
             'rate_limit_tpm': self.rate_limit_tpm,
             'memory_db_path': self.memory_db_path,

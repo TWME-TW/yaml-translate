@@ -4,6 +4,7 @@
 """
 
 import time
+import threading
 from typing import List, Tuple
 from collections import deque
 
@@ -22,6 +23,8 @@ class RateLimiter:
         self.rpm_limit = requests_per_minute
         self.tpm_limit = tokens_per_minute
         
+        self.lock = threading.Lock()
+        
         # 使用 deque 記錄請求時間和 token 數
         self.request_times: deque = deque()
         self.token_records: deque = deque()  # (timestamp, tokens)
@@ -33,32 +36,34 @@ class RateLimiter:
         Args:
             estimated_tokens: 預估的 token 數
         """
-        current_time = time.time()
-        
-        # 清理 60 秒前的記錄
-        self._clean_old_records(current_time)
-        
-        # 檢查請求數限制
-        if len(self.request_times) >= self.rpm_limit:
-            # 計算需要等待的時間
-            oldest_time = self.request_times[0]
-            wait_time = 60 - (current_time - oldest_time)
-            if wait_time > 0:
-                print(f"⏳ Rate limit reached. Waiting {wait_time:.1f} seconds...")
-                time.sleep(wait_time)
-                self._clean_old_records(time.time())
-        
-        # 檢查 token 數限制
-        current_tokens = sum(tokens for _, tokens in self.token_records)
-        if current_tokens + estimated_tokens > self.tpm_limit:
-            # 找到最舊的記錄，計算等待時間
-            if self.token_records:
-                oldest_time = self.token_records[0][0]
-                wait_time = 60 - (current_time - oldest_time)
+        while True:
+            with self.lock:
+                current_time = time.time()
+                
+                # 清理 60 秒前的記錄
+                self._clean_old_records(current_time)
+                
+                wait_time = 0
+                # 檢查請求數限制
+                if len(self.request_times) >= self.rpm_limit:
+                    oldest_time = self.request_times[0]
+                    wait_time = max(wait_time, 60 - (current_time - oldest_time))
+                
+                # 檢查 token 數限制
+                current_tokens = sum(tokens for _, tokens in self.token_records)
+                if current_tokens + estimated_tokens > self.tpm_limit:
+                    if self.token_records:
+                        oldest_time = self.token_records[0][0]
+                        wait_time = max(wait_time, 60 - (current_time - oldest_time))
+                
                 if wait_time > 0:
-                    print(f"⏳ Token limit reached. Waiting {wait_time:.1f} seconds...")
-                    time.sleep(wait_time)
-                    self._clean_old_records(time.time())
+                    pass # We will sleep outside the lock
+                else:
+                    return # Safe to proceed
+            
+            if wait_time > 0:
+                print(f"⏳ Rate limit approaching. Thread waiting {wait_time:.1f} seconds...")
+                time.sleep(wait_time)
     
     def record_request(self, tokens_used: int):
         """
@@ -67,9 +72,10 @@ class RateLimiter:
         Args:
             tokens_used: 使用的 token 數
         """
-        current_time = time.time()
-        self.request_times.append(current_time)
-        self.token_records.append((current_time, tokens_used))
+        with self.lock:
+            current_time = time.time()
+            self.request_times.append(current_time)
+            self.token_records.append((current_time, tokens_used))
     
     def _clean_old_records(self, current_time: float):
         """
