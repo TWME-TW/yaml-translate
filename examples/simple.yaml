@@ -1,0 +1,27 @@
+# Simple Example YAML for Translation
+
+app:
+  name: "My Application"
+  version: "1.0.0"
+  description: "This is a simple application for demonstration purposes"
+
+settings:
+  theme: "dark"
+  language: "en"
+  notifications:
+    enabled: true
+    email: true
+    push: false
+
+messages:
+  welcome: "Welcome to our application!"
+  goodbye: "Thank you for using our service"
+  error:
+    generic: "An error occurred. Please try again."
+    network: "Network connection failed"
+    timeout: "Request timed out"
+
+features:
+  authentication: true
+  analytics: false
+  beta_features: false

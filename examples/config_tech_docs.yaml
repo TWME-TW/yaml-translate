@@ -1,0 +1,31 @@
+# 技術文檔專用配置
+# 適合翻譯技術文檔、API 文檔等
+
+api:
+  url: "https://api.openai.com/v1"
+  key: "your-api-key-here"
+  model: "gpt-4"
+
+translation:
+  target_language: "zh-TW"
+  max_tokens_per_request: 4000
+
+rate_limit:
+  requests_per_minute: 60
+  tokens_per_minute: 90000
+
+memory:
+  enabled: true
+  db_path: "./translation_memory.db"
+
+# 技術文檔專用 Prompt 設定
+prompt:
+  rules:
+    - "1. 只返回翻譯後的文本，不添加任何解釋或註釋"
+    - "2. 完整保持 YAML 的結構、縮排和格式"
+    - "3. 以下技術術語保持英文：API, Token, Authentication, Authorization, Configuration, Database, Cache, Session, Cookie"
+    - "4. 變數名稱（如 api_key, database_url, max_connections）完全保持不變"
+    - "5. 使用台灣繁體中文（zh-TW）"
+    - "6. 技術名詞首次出現時可加註英文，格式：中文翻譯 (English Term)"
+    - "7. 保持專業、準確的技術文檔語氣"
+    - "8. 對於已有標準翻譯的術語，使用業界通用翻譯"

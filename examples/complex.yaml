@@ -1,0 +1,177 @@
+# Complex Example YAML - Simulating a large configuration file
+
+application:
+  metadata:
+    name: "Enterprise Management System"
+    version: "2.5.0"
+    release_date: "2024-01-15"
+    description: |
+      A comprehensive enterprise management system that handles
+      multiple business processes including inventory, sales,
+      customer relationship management, and reporting.
+    
+  modules:
+    inventory:
+      enabled: true
+      settings:
+        auto_reorder: true
+        low_stock_threshold: 10
+        categories:
+          - "Electronics"
+          - "Furniture"
+          - "Office Supplies"
+          - "Food & Beverages"
+      
+      notifications:
+        low_stock:
+          enabled: true
+          message: "Stock level is below threshold"
+          recipients:
+            - "inventory@company.com"
+            - "manager@company.com"
+        
+        out_of_stock:
+          enabled: true
+          message: "Item is out of stock"
+          recipients:
+            - "inventory@company.com"
+            - "purchasing@company.com"
+    
+    sales:
+      enabled: true
+      payment_methods:
+        credit_card:
+          enabled: true
+          providers:
+            - "Visa"
+            - "MasterCard"
+            - "American Express"
+        
+        bank_transfer:
+          enabled: true
+          processing_time: "2-3 business days"
+        
+        digital_wallet:
+          enabled: true
+          providers:
+            - "PayPal"
+            - "Apple Pay"
+            - "Google Pay"
+      
+      discounts:
+        seasonal:
+          spring_sale:
+            percentage: 20
+            start_date: "2024-03-01"
+            end_date: "2024-03-31"
+            description: "Spring season discount for all items"
+          
+          summer_sale:
+            percentage: 15
+            start_date: "2024-06-01"
+            end_date: "2024-08-31"
+            description: "Summer vacation special offers"
+        
+        membership:
+          gold:
+            percentage: 10
+            description: "Gold member exclusive discount"
+          
+          platinum:
+            percentage: 15
+            description: "Platinum member exclusive discount"
+          
+          diamond:
+            percentage: 25
+            description: "Diamond member VIP discount"
+
+user_interface:
+  themes:
+    light:
+      primary_color: "#FFFFFF"
+      secondary_color: "#F0F0F0"
+      accent_color: "#007BFF"
+      text_color: "#333333"
+    
+    dark:
+      primary_color: "#1E1E1E"
+      secondary_color: "#2D2D2D"
+      accent_color: "#0D6EFD"
+      text_color: "#FFFFFF"
+  
+  messages:
+    authentication:
+      login_success: "Successfully logged in. Welcome back!"
+      login_failed: "Invalid username or password. Please try again."
+      logout_success: "You have been successfully logged out."
+      session_expired: "Your session has expired. Please log in again."
+    
+    operations:
+      save_success: "Changes have been saved successfully."
+      save_failed: "Failed to save changes. Please try again."
+      delete_confirm: "Are you sure you want to delete this item?"
+      delete_success: "Item has been deleted successfully."
+      update_success: "Item has been updated successfully."
+    
+    errors:
+      network_error: "Network connection error. Please check your internet connection."
+      server_error: "Server error occurred. Please contact support if the problem persists."
+      validation_error: "Please check your input and try again."
+      permission_denied: "You don't have permission to perform this action."
+      not_found: "The requested resource was not found."
+      timeout: "The request timed out. Please try again later."
+
+database:
+  connections:
+    primary:
+      host: "db.primary.company.local"
+      port: 5432
+      database: "production"
+      description: "Primary production database"
+    
+    replica:
+      host: "db.replica.company.local"
+      port: 5432
+      database: "production"
+      description: "Read replica for reporting queries"
+    
+    analytics:
+      host: "db.analytics.company.local"
+      port: 5432
+      database: "analytics"
+      description: "Analytics and data warehouse database"
+
+reporting:
+  schedules:
+    daily:
+      sales_report:
+        time: "08:00"
+        recipients:
+          - "sales@company.com"
+          - "management@company.com"
+        description: "Daily sales summary report"
+      
+      inventory_report:
+        time: "07:00"
+        recipients:
+          - "inventory@company.com"
+        description: "Daily inventory status report"
+    
+    weekly:
+      performance_report:
+        day: "Monday"
+        time: "09:00"
+        recipients:
+          - "management@company.com"
+          - "hr@company.com"
+        description: "Weekly performance and metrics report"
+    
+    monthly:
+      financial_report:
+        day: 1
+        time: "10:00"
+        recipients:
+          - "finance@company.com"
+          - "management@company.com"
+          - "board@company.com"
+        description: "Monthly financial summary and analysis"

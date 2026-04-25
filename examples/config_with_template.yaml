@@ -1,0 +1,26 @@
+# 使用外部模板的配置範例
+# 展示如何使用 prompt 模板文件
+
+api:
+  url: "https://api.openai.com/v1"
+  key: "your-api-key-here"
+  model: "gpt-4"
+
+translation:
+  target_language: "zh-TW"
+  max_tokens_per_request: 4000
+
+rate_limit:
+  requests_per_minute: 60
+  tokens_per_minute: 90000
+
+memory:
+  enabled: true
+  db_path: "./translation_memory.db"
+
+# 使用外部 Prompt 模板
+prompt:
+  # 指定模板文件（相對於專案根目錄）
+  template_file: "./prompts/chinese_template.txt"
+  
+  # 注意：使用 template_file 時，rules 和 custom_prompt 會被忽略

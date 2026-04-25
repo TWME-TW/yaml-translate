@@ -1,0 +1,33 @@
+# UI 文本專用配置
+# 適合翻譯用戶界面、應用程式字串等
+
+api:
+  url: "https://api.openai.com/v1"
+  key: "your-api-key-here"
+  model: "gpt-4"
+
+translation:
+  target_language: "zh-TW"
+  max_tokens_per_request: 4000
+
+rate_limit:
+  requests_per_minute: 60
+  tokens_per_minute: 90000
+
+memory:
+  enabled: true
+  db_path: "./translation_memory.db"
+
+# UI 文本專用 Prompt 設定
+prompt:
+  rules:
+    - "1. 只返回翻譯後的文本"
+    - "2. 保持 YAML 結構不變"
+    - "3. 使用簡潔、友好的語言"
+    - "4. 採用動作導向的表達方式"
+    - "5. 每個字串盡量控制在 50 字以內"
+    - "6. 考慮文化差異，使用本地化的表達"
+    - "7. 使用台灣繁體中文，符合台灣用戶習慣"
+    - "8. 按鈕文字使用動詞開頭（如：儲存、取消、確認）"
+    - "9. 錯誤訊息要清楚說明問題和解決方向"
+    - "10. 保持與現代應用程式的語調一致"

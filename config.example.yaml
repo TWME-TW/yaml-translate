@@ -1,0 +1,43 @@
+# API 配置
+api:
+  url: "https://api.openai.com/v1"
+  key: "your-api-key-here"
+  model: "gpt-4"
+
+# 翻譯設定
+translation:
+  target_language: "zh-TW"
+  max_tokens_per_request: 4000
+  
+# 速率限制
+rate_limit:
+  requests_per_minute: 60
+  tokens_per_minute: 90000
+  
+# 翻譯記憶庫
+memory:
+  enabled: true
+  db_path: "./translation_memory.db"
+  similarity_threshold: 0.8
+  
+# 輸出設定
+output:
+  preserve_comments: true
+  indent: 2
+  show_progress: true
+
+# Prompt 設定（可選）
+prompt:
+  # 完整自定義 prompt（使用 {target_lang} 和 {text} 作為變數）
+  # custom_prompt: "You are a translator. Translate to {target_lang}: {text}"
+  
+  # 或使用外部模板文件
+  # template_file: "./prompts/translation_template.txt"
+  
+  # 或只自定義翻譯規則
+  rules:
+    - "1. Only return the translated text, nothing else"
+    - "2. Preserve the original structure and formatting"
+    - "3. Do not add explanations or comments"
+    - "4. Keep technical terms, variable names, and code unchanged"
+    - "5. Maintain consistency with previous translations if provided"
