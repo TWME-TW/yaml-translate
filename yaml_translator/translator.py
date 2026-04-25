@@ -78,6 +78,20 @@ class YAMLTranslator:
         """
         target_lang = target_language or self.config.target_language
         
+        # 清理 target_keys 中的 root 前綴
+        if target_keys:
+            cleaned_keys = []
+            for tk in target_keys:
+                if tk.startswith("root."):
+                    cleaned_keys.append(tk[5:])
+                elif tk.startswith("root["):
+                    cleaned_keys.append(tk[4:])
+                elif tk == "root":
+                    cleaned_keys.append("")
+                else:
+                    cleaned_keys.append(tk)
+            target_keys = cleaned_keys
+            
         print(f"\n📄 Processing: {input_file}")
         print(f"🎯 Target language: {target_lang}")
         if target_keys:
