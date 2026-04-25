@@ -58,3 +58,10 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+.env
+
+config.yaml
+config.yml
+
+prompts/*
