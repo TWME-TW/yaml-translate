@@ -56,7 +56,8 @@ class OpenAIClient:
         target_lang: str,
         memory_context: Optional[str] = None,
         temperature: float = 0.3,
-        previous_error: Optional[str] = None
+        previous_error: Optional[str] = None,
+        previous_translation: Optional[str] = None
     ) -> str:
         """
         翻譯文本
@@ -67,11 +68,12 @@ class OpenAIClient:
             memory_context: 翻譯記憶上下文
             temperature: 溫度參數（0-1，越低越確定）
             previous_error: 先前解析錯誤時的錯誤訊息，用於讓 LLM 修正
+            previous_translation: 先前解析錯誤時的翻譯內容
             
         Returns:
             str: 翻譯結果
         """
-        prompt = self._build_prompt(text, target_lang, memory_context, previous_error)
+        prompt = self._build_prompt(text, target_lang, memory_context, previous_error, previous_translation)
         
         for attempt in range(self.max_retries):
             try:
@@ -90,7 +92,8 @@ class OpenAIClient:
         text: str, 
         target_lang: str, 
         memory_context: Optional[str],
-        previous_error: Optional[str] = None
+        previous_error: Optional[str] = None,
+        previous_translation: Optional[str] = None
     ) -> str:
         """
         構建翻譯提示詞
@@ -100,6 +103,7 @@ class OpenAIClient:
             target_lang: 目標語言
             memory_context: 記憶上下文
             previous_error: 上次的錯誤訊息（如果有）
+            previous_translation: 上次錯誤的翻譯內容（如果有）
             
         Returns:
             str: 提示詞
@@ -107,7 +111,10 @@ class OpenAIClient:
         # 最終返回前，如果有錯誤訊息，附加在 Prompt 後面
         error_suffix = ""
         if previous_error:
-            error_suffix = f"\n\nERROR TO FIX:\nYou previously provided an invalid YAML output that caused the following parse error. Please make sure to provide valid YAML format that strictly follows the structure of the original YAML.\nError message: {previous_error}\n"
+            error_suffix = "\n\nERROR TO FIX:\nYou previously provided an invalid YAML output that caused a parse error. Please make sure to provide valid YAML format that strictly follows the structure of the original YAML.\n"
+            if previous_translation:
+                error_suffix += f"\nYour invalid translation:\n```yaml\n{previous_translation}\n```\n"
+            error_suffix += f"\nError message: {previous_error}\n"
 
         # 如果有自定義 prompt 模板文件，優先使用
         if self.prompt_template_file:

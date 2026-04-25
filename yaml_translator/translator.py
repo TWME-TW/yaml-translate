@@ -64,7 +64,8 @@ class YAMLTranslator:
         self, 
         input_file: str, 
         output_file: str,
-        target_language: Optional[str] = None
+        target_language: Optional[str] = None,
+        target_keys: Optional[list[str]] = None
     ):
         """
         翻譯 YAML 文件
@@ -73,24 +74,46 @@ class YAMLTranslator:
             input_file: 輸入文件路徑
             output_file: 輸出文件路徑
             target_language: 目標語言（可選，覆蓋配置）
+            target_keys: 指定要翻譯的鍵路徑列表（可選）
         """
         target_lang = target_language or self.config.target_language
         
         print(f"\n📄 Processing: {input_file}")
         print(f"🎯 Target language: {target_lang}")
+        if target_keys:
+            print(f"🔑 Target keys: {', '.join(target_keys)}")
         
         # 1. 解析並分段
         print("\n🔍 Parsing and segmenting YAML...")
-        segments = self.parser.parse(input_file)
+        segments = self.parser.parse(input_file, target_keys=target_keys)
         print(f"   Created {len(segments)} segment(s)")
         
-        # 顯示分段統計
-        total_tokens = sum(s.token_count for s in segments)
-        print(f"   Total tokens: {total_tokens}")
-        print(f"   Average tokens per segment: {total_tokens // len(segments) if segments else 0}")
+        # 篩選出需要翻譯的段落
+        segments_to_translate = []
+        for segment in segments:
+            if self._should_translate(segment.path, target_keys):
+                segments_to_translate.append(segment)
+            else:
+                # 標記為不需要翻譯
+                segment.translated_content = None
         
+        # 顯示分段統計
+        total_tokens = sum(s.token_count for s in segments_to_translate)
+        print(f"   Segments to translate: {len(segments_to_translate)} / {len(segments)}")
+        if segments_to_translate:
+            print(f"   Total tokens: {total_tokens}")
+            print(f"   Average tokens per segment: {total_tokens // len(segments_to_translate)}")
+        
+        # 如果沒有需要翻譯的段落，直接保存並返回
+        if not segments_to_translate:
+            print("\n⚠️ No segments match the target keys. Saving original YAML...")
+            result = self.parser.reconstruct_yaml(segments, fallback_to_original=True)
+            self.parser.save_yaml(result, output_file)
+            print("\n✅ Operation completed!")
+            return
+            
         # 2. 翻譯每個段落
-        print(f"\n🌍 Translating {len(segments)} segment(s)...")
+        print(f"\n🌍 Translating {len(segments_to_translate)} segment(s)...")
         print(f"   (Intermediate result will be auto-saved to {output_file} periodically)")
         print(f"   (Concurrency: {self.config.concurrency} worker threads)")
         
@@ -100,11 +123,11 @@ class YAMLTranslator:
             # 提交所有任務
             future_to_segment = {
                 executor.submit(self._translate_segment, segment, target_lang): segment
-                for segment in segments
+                for segment in segments_to_translate
             }
             
             # 使用 tqdm 追蹤進度
-            for future in tqdm(concurrent.futures.as_completed(future_to_segment), total=len(segments), desc="Translating", unit="segment"):
+            for future in tqdm(concurrent.futures.as_completed(future_to_segment), total=len(segments_to_translate), desc="Translating", unit="segment"):
                 segment = future_to_segment[future]
                 try:
                     # 等待並獲取結果
@@ -115,7 +138,7 @@ class YAMLTranslator:
                 completed += 1
                 
                 # 每 5 個 segment 或是處理完所有段落時，即時寫入檔案（提供預覽）
-                if completed % 5 == 0 or completed == len(segments):
+                if completed % 5 == 0 or completed == len(segments_to_translate):
                     try:
                         temp_result = self.parser.reconstruct_yaml(segments, fallback_to_original=True)
                         self.parser.save_yaml(temp_result, output_file)
@@ -131,7 +154,23 @@ class YAMLTranslator:
         self.parser.save_yaml(result, output_file)
         
         print("\n✅ Translation completed!")
-        self._print_summary(segments)
+        self._print_summary(segments_to_translate)
+        
+    def _should_translate(self, path: str, target_keys: Optional[list[str]]) -> bool:
+        """判斷段落是否需要翻譯"""
+        if not target_keys:
+            return True
+            
+        clean_path = path[5:] if path.startswith("root.") else path
+        if path.startswith("root["):
+            clean_path = path[4:]
+        if path == "root":
+            clean_path = ""
+            
+        for tk in target_keys:
+            if clean_path == tk or clean_path.startswith(tk + ".") or clean_path.startswith(tk + "[") or tk.startswith(clean_path + ".") or tk.startswith(clean_path + "["):
+                return True
+        return False
     
     def _translate_segment(self, segment: YAMLSegment, target_lang: str):
         """
@@ -176,15 +215,18 @@ class YAMLTranslator:
         
         max_retries = self.config.max_retries
         last_error_msg = None
+        last_failed_translation = None
         
         for attempt in range(max_retries + 1):
             try:
+                translated_text = None
                 # 呼叫 API 翻譯
                 translated_text = self.api_client.translate(
                     text, 
                     target_lang, 
                     memory_context,
-                    previous_error=last_error_msg
+                    previous_error=last_error_msg,
+                    previous_translation=last_failed_translation
                 )
                 
                 # 記錄請求
@@ -233,6 +275,9 @@ class YAMLTranslator:
                 import traceback
                 print(f"DEBUG EXCEPTION TYPE: {type(e)}")
                 last_error_msg = str(e)
+                if 'translated_text' in locals() and translated_text is not None:
+                    last_failed_translation = translated_text
+                    
                 import time
                 if attempt < max_retries:
                     print(f"\n⚠️ Error translating segment {segment.path}: {e}. Retrying ({attempt+1}/{max_retries})...")
@@ -241,6 +286,7 @@ class YAMLTranslator:
                     print(f"\n❌ Failed to translate segment {segment.path} after {max_retries + 1} attempts: {e}")
                     # 使用原文作為備用
                     segment.translated_content = segment.content
+                    segment.failed = True
     
     def _print_summary(self, segments):
         """
@@ -255,9 +301,18 @@ class YAMLTranslator:
         
         total_segments = len(segments)
         total_tokens = sum(s.token_count for s in segments)
+        failed_segments = [s for s in segments if getattr(s, 'failed', False)]
         
         print(f"Total segments: {total_segments}")
+        print(f"Failed segments: {len(failed_segments)}")
         print(f"Total tokens: {total_tokens}")
+
+        if failed_segments:
+            print("\n" + "-"*50)
+            print("FAILED SEGMENTS (Used original content fallback):")
+            for fs in failed_segments:
+                print(f"  - {fs.path}")
+            print("-"*50)
         
         # 速率限制統計
         rate_stats = self.rate_limiter.get_stats()

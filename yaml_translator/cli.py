@@ -64,6 +64,16 @@ from .translator import YAMLTranslator
     is_flag=True,
     help='Test API connection and exit'
 )
+@click.option(
+    '-k', '--keys',
+    type=str,
+    help='Comma-separated specified YAML keys/paths to translate (e.g., config.title,menu.items)'
+)
+@click.option(
+    '-i', '--in-place',
+    is_flag=True,
+    help='Modify the input file in-place (overwrites the original file)'
+)
 @click.version_option(version='0.1.0', prog_name='yaml-translate')
 def main(
     input_file,
@@ -76,14 +86,17 @@ def main(
     max_tokens,
     rpm_limit,
     tpm_limit,
-    test_connection
+    test_connection,
+    keys,
+    in_place
 ):
     """
     YAML Translator - Translate YAML files using AI
     
     Example:
     
-        yaml-translate input.yaml -o output.yaml -l zh-TW
+        yaml-translate input.yaml -i -l zh-TW
+        yaml-translate input.yaml -o output.yaml -l zh-TW -k app.name,settings.theme
     """
     try:
         # 載入配置
@@ -104,6 +117,9 @@ def main(
             cfg.rate_limit_rpm = rpm_limit
         if tpm_limit:
             cfg.rate_limit_tpm = tpm_limit
+            
+        # 處理指定的鍵列表
+        target_keys = [k.strip() for k in keys.split(',')] if keys else None
         
         # 驗證配置
         try:
@@ -125,7 +141,9 @@ def main(
                     sys.exit(1)
             
             # 確定輸出文件名
-            if not output:
+            if in_place:
+                output = input_file
+            elif not output:
                 input_path = Path(input_file)
                 output = str(input_path.parent / f"{input_path.stem}_translated{input_path.suffix}")
             
@@ -134,7 +152,8 @@ def main(
             translator.translate_file(
                 input_file=input_file,
                 output_file=output,
-                target_language=language
+                target_language=language,
+                target_keys=target_keys
             )
             elapsed_time = time.time() - start_time
             

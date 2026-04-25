@@ -52,12 +52,13 @@ class YAMLParser:
             # 如果模型不存在，使用默認編碼
             self.encoding = tiktoken.get_encoding("cl100k_base")
     
-    def parse(self, yaml_file: str) -> List[YAMLSegment]:
+    def parse(self, yaml_file: str, target_keys: Optional[List[str]] = None) -> List[YAMLSegment]:
         """
         解析 YAML 文件並分段
         
         Args:
             yaml_file: YAML 文件路徑
+            target_keys: 指定要翻譯的鍵路徑
             
         Returns:
             List[YAMLSegment]: 段落列表
@@ -70,16 +71,37 @@ class YAMLParser:
         
         # 分段
         segments = []
-        self._segment_recursive(data, "root", None, segments)
+        self._segment_recursive(data, "root", None, segments, target_keys)
         
         return segments
     
+    def _clean_path(self, path: str) -> str:
+        if path.startswith("root."):
+            return path[5:]
+        if path.startswith("root["):
+            return path[4:]
+        if path == "root":
+            return ""
+        return path
+        
+    def _force_split(self, path: str, target_keys: Optional[List[str]]) -> bool:
+        if not target_keys:
+            return False
+        clean_path = self._clean_path(path)
+        if clean_path == "":
+            return True
+        for tk in target_keys:
+            if tk.startswith(clean_path + ".") or tk.startswith(clean_path + "["):
+                return True
+        return False
+
     def _segment_recursive(
         self, 
         data: Any, 
         path: str, 
         parent: Optional[str],
-        segments: List[YAMLSegment]
+        segments: List[YAMLSegment],
+        target_keys: Optional[List[str]] = None
     ):
         """
         遞迴分段
@@ -89,33 +111,36 @@ class YAMLParser:
             path: 當前路徑
             parent: 父節點路徑
             segments: 段落列表
+            target_keys: 指定要翻譯的鍵路徑
         """
+        force_split = self._force_split(path, target_keys)
+        
         if isinstance(data, dict):
             # 嘗試將整個字典作為一個段落
             segment = YAMLSegment(path, data, parent)
             segment.token_count = self._estimate_tokens(data)
             
-            if segment.token_count <= self.max_tokens:
-                # 如果 token 數在限制內，添加這個段落
+            if not force_split and segment.token_count <= self.max_tokens:
+                # 如果 token 數在限制內且不強制分割，添加這個段落
                 segments.append(segment)
             else:
-                # 如果超過限制，遞迴處理每個子項
+                # 遞迴處理每個子項
                 for key, value in data.items():
                     child_path = f"{path}.{key}"
-                    self._segment_recursive(value, child_path, path, segments)
+                    self._segment_recursive(value, child_path, path, segments, target_keys)
         
         elif isinstance(data, list):
             # 嘗試將整個列表作為一個段落
             segment = YAMLSegment(path, data, parent)
             segment.token_count = self._estimate_tokens(data)
             
-            if segment.token_count <= self.max_tokens:
+            if not force_split and segment.token_count <= self.max_tokens:
                 segments.append(segment)
             else:
-                # 如果超過限制，處理每個列表項
+                # 處理每個列表項
                 for i, item in enumerate(data):
                     child_path = f"{path}[{i}]"
-                    self._segment_recursive(item, child_path, path, segments)
+                    self._segment_recursive(item, child_path, path, segments, target_keys)
         
         else:
             # 基本類型（字符串、數字等）
